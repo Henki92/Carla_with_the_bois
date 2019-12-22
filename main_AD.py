@@ -3,7 +3,7 @@ import os
 import sys
 
 try:
-    sys.path.append(glob.glob('CARLA_0.9.5/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('../CARLA_0.9.5/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
@@ -29,7 +29,6 @@ RGB_img_ready = False
 bounding_box_ready = False
 bounding_box = []
 
-
 def process_img(image):
     global RGB_image, RGB_img_ready
     i = np.array(image.raw_data)
@@ -41,7 +40,6 @@ def process_img(image):
     cv2.waitKey(250)
     RGB_image = i3
     RGB_img_ready = True
-
 
 def save_OD_screenshots(SEG_img):
     global bounding_box, bounding_box_ready
