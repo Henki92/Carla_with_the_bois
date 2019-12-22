@@ -1,0 +1,1 @@
+python CARLA_0.9.5\PythonAPI\examples\manual_control.py
