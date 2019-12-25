@@ -18,7 +18,8 @@ import time
 import numpy as np
 import cv2
 from lane_detection_functions import overlay_lane_detection
-
+#from controller import *
+import queue
 
 RGB_image = None
 SEG_image = None
@@ -26,7 +27,6 @@ IM_WIDTH = 1280
 IM_HEIGHT = 720
 actor_list = []
 RGB_img_ready = False
-bounding_box_ready = False
 bounding_box = []
 
 def process_img(image):
@@ -40,28 +40,6 @@ def process_img(image):
     cv2.waitKey(250)
     RGB_image = i3
     RGB_img_ready = True
-
-def save_OD_screenshots(SEG_img):
-    global bounding_box, bounding_box_ready
-    i = np.array(SEG_img.raw_data)
-    i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
-    i3 = i2[:, :, 2:3]
-    # Find interesting area
-    list_of_pixel_coord_with_cars = np.where(i3 == 10)
-    #print(list_of_pixel_coord_with_cars)
-    coord = list(zip(list_of_pixel_coord_with_cars[0], list_of_pixel_coord_with_cars[1]))
-    #print(coord)
-    # iterate over the list of coordinates
-    x_min = np.min(list_of_pixel_coord_with_cars[1])
-    x_max = np.max(list_of_pixel_coord_with_cars[1])
-    y_min = np.max(list_of_pixel_coord_with_cars[0])
-    y_max = np.min(list_of_pixel_coord_with_cars[0])
-    #for cord in coord:
-    #    print(cord)
-    # Draw bounding box
-    bounding_box = [x_min, x_max, y_min, y_max]
-    bounding_box_ready = True
-
 
 def save_screenshot():
     global RGB_image, bounding_box
@@ -86,12 +64,40 @@ def add_test_car(spawn_point):
     vehicle2.set_autopilot(True)  # if you just wanted some NPCs to drive.
     actor_list.append(vehicle2)
 
+def draw_image(surface, image):
+    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+    array = np.reshape(array, (image.height, image.width, 4))
+    array = array[:, :, :3]
+    array = array[:, :, ::-1]
+    image_surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+    surface.blit(image_surface, (0, 0))
 
-try:
+def parse_image(image):
+    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
+    array = np.reshape(array, (image.height, image.width, 4))
+    array = array[:, :, :3]
+    array = array[:, :, ::-1]
+    image_surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
+    #pygame.display.get_surface().blit(image_surface, (0,0))
+
+try:    
+    pygame.init()
+    pygame.font.init()
+
     client = carla.Client('localhost', 2000)
     client.set_timeout(5.0)
-
     world = client.get_world()
+    pygame_width = 1280
+    pygame_height = 720
+    display = pygame.display.set_mode(
+            (pygame_width, pygame_height),
+            pygame.HWSURFACE | pygame.DOUBLEBUF)
+
+    # Add input key parser 
+    start_in_autopilot = True
+    #controller = KeyboardInput(start_in_autopilot)
+
+    clock = pygame.time.Clock()
 
     blueprint_library = world.get_blueprint_library()
 
@@ -105,7 +111,7 @@ try:
     vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
     actor_list.append(vehicle)
 
-    add_test_car(spawn_point)
+    #add_test_car(spawn_point)
 
     # vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
 
@@ -118,36 +124,38 @@ try:
     blueprint_rgb.set_attribute('image_size_y', f'{IM_HEIGHT}')
     blueprint_rgb.set_attribute('fov', '110')
 
-    # get the blueprint for this sensor
-    blueprint_seg = blueprint_library.find('sensor.camera.semantic_segmentation')
-    # change the dimensions of the image
-    blueprint_seg.set_attribute('image_size_x', f'{IM_WIDTH}')
-    blueprint_seg.set_attribute('image_size_y', f'{IM_HEIGHT}')
-    blueprint_seg.set_attribute('fov', '110')
-
     # Adjust sensor relative to vehicle
     spawn_point = carla.Transform(carla.Location(x=2.5, z=1.3), carla.Rotation(pitch=-0.5))
 
     # spawn the sensor and attach to vehicle.
     sensor_rgb = world.spawn_actor(blueprint_rgb, spawn_point, attach_to=vehicle)
-    # spawn the sensor and attach to vehicle.
-    sensor_seg = world.spawn_actor(blueprint_seg, spawn_point, attach_to=vehicle)
+    
+    image_queue = queue.Queue()
+    sensor_rgb.listen(image_queue.put)
 
     # add sensor to list of actors
     actor_list.append(sensor_rgb)
-    # add sensor to list of actors
-    actor_list.append(sensor_seg)
 
     # do something with this sensor
-    sensor_rgb.listen(lambda data: process_img(data))
-    #sensor_seg.listen(lambda data: save_OD_screenshots(data))
+    #sensor_rgb.listen(lambda data: parse_image(data))
     while True:
+        pygame.event.get()
+        image = image_queue.get()
         #time.sleep(1) #make function to sleep for 10 seconds
-        if bounding_box_ready and RGB_img_ready:
-            save_screenshot()
+        #clock.tick_busy_loop(60)
+        #controller.parse_events(client, world, clock)
+        
+        #world.tick()
+        draw_image(display, image)
+        pygame.display.flip()
+        clock.tick()
+        #text_surface = font.render('% 5d FPS' % clock.get_fps(), True, (255, 255, 255))
+        #display.blit(text_surface, (8, 10)))
+
 
 finally:
     print('destroying actors')
     for actor in actor_list:
         actor.destroy()
     print('done.')
+    pygame.quit()
