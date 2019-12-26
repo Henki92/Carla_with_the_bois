@@ -8,6 +8,7 @@ try:
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
     sys.path.append('Lane_detection')
+    sys.path.append('Object_detection')
 except IndexError:
     pass
 
@@ -18,6 +19,7 @@ import time
 import numpy as np
 import cv2
 from lane_main import *
+from Obj_2 import find_bounding_boxes
 
 
 RGB_image = None
@@ -44,32 +46,29 @@ def process_img(image):
 
 
 def save_OD_screenshots(SEG_img):
-    global bounding_box, bounding_box_ready
+    global bounding_box, bounding_box_ready, SEG_image, RGB_image
     i = np.array(SEG_img.raw_data)
     i2 = i.reshape((IM_HEIGHT, IM_WIDTH, 4))
-    i3 = i2[:, :, 2:3]
-    # Find interesting area
-    list_of_pixel_coord_with_cars = np.where(i3 == 10)
-    #print(list_of_pixel_coord_with_cars)
-    coord = list(zip(list_of_pixel_coord_with_cars[0], list_of_pixel_coord_with_cars[1]))
-    #print(coord)
-    # iterate over the list of coordinates
-    x_min = np.min(list_of_pixel_coord_with_cars[1])
-    x_max = np.max(list_of_pixel_coord_with_cars[1])
-    y_min = np.max(list_of_pixel_coord_with_cars[0])
-    y_max = np.min(list_of_pixel_coord_with_cars[0])
-    #for cord in coord:
-    #    print(cord)
+    i3 = i2[:, :, :3]
     # Draw bounding box
-    bounding_box = [x_min, x_max, y_min, y_max]
+    OD_object_list = find_bounding_boxes(i3)
     bounding_box_ready = True
+    # Draw bounding boxes
+    for obj in OD_object_list:
+        result = cv2.rectangle(RGB_image, (min(obj.x), min(obj.y)), (max(obj.x), max(obj.y)), (0, 0, 255), 3,
+                               cv2.LINE_AA)
+
+    cv2.imshow("Result image", RGB_image)
+    cv2.waitKey(0)
+
+    #save_screenshot()
 
 
 def save_screenshot():
-    global RGB_image, bounding_box
-    result = cv2.rectangle(RGB_image, (bounding_box[0], bounding_box[2]), (bounding_box[1], bounding_box[3]), (0, 0, 255), 3, cv2.LINE_AA)
-    cv2.imshow("Object detection", result)
-    cv2.waitKey(250)
+    global SEG_image, RGB_image, bounding_box
+    #result = cv2.rectangle(RGB_image, (bounding_box[0], bounding_box[2]), (bounding_box[1], bounding_box[3]), (0, 0, 255), 3, cv2.LINE_AA)
+    cv2.imwrite('Object_detection.png', SEG_image)
+    cv2.waitKey(0)
     #print("SAVE SCREENSHOT FUNCTION")
 
 
@@ -85,9 +84,28 @@ def add_test_car(spawn_point):
         spawn_point_2.location.x = spawn_point_2.location.x - 8
     print("Spawn point test car:", spawn_point_2)
     vehicle2 = world.spawn_actor(bp, spawn_point_2)
-    vehicle2.set_autopilot(True)  # if you just wanted some NPCs to drive.
+    vehicle2.set_autopilot(True)  # if you just wanted some NPCs to drive.w
     actor_list.append(vehicle2)
 
+
+def add_test_car2(spawn_point):
+    spawn_point_2 = spawn_point
+    if 10 > spawn_point.rotation.yaw > -10:
+        spawn_point_2.location.x = spawn_point_2.location.x + 8
+        spawn_point_2.location.y = spawn_point_2.location.y + 8
+    elif 100 > spawn_point.rotation.yaw > 80:
+        spawn_point_2.location.x = spawn_point_2.location.x + 8
+        spawn_point_2.location.y = spawn_point_2.location.y + 8
+    elif -80 > spawn_point.rotation.yaw > -100:
+        spawn_point_2.location.x = spawn_point_2.location.x + 8
+        spawn_point_2.location.y = spawn_point_2.location.y - 8
+    else:
+        spawn_point_2.location.y = spawn_point_2.location.y - 8
+        spawn_point_2.location.x = spawn_point_2.location.x - 8
+    print("Spawn point test car:", spawn_point_2)
+    vehicle2 = world.spawn_actor(bp, spawn_point_2)
+    vehicle2.set_autopilot(True)  # if you just wanted some NPCs to drive.w
+    actor_list.append(vehicle2)
 
 try:
     client = carla.Client('localhost', 2000)
@@ -107,7 +125,8 @@ try:
     vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
     actor_list.append(vehicle)
 
-    #add_test_car(spawn_point)
+    add_test_car(spawn_point)
+    #add_test_car2(spawn_point)
 
     # vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
 
