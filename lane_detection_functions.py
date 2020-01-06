@@ -16,15 +16,18 @@ def average_slope_intercept(image, lines):
     right_fit = []
     for line in lines:
         x1, y1, x2, y2 = line.reshape(4)
-        parameters = np.polynomial.polynomial.Polynomial.fit((x1,x2), (y1,y2),1)
-        parameters = parameters.convert().coef
+        try:
+            parameters = np.polynomial.polynomial.Polynomial.fit((x1,x2), (y1,y2),1)
+            parameters = parameters.convert().coef
+        except np.linalg.LinAlgError:
+            parameters = []
         if len(parameters) == 2:
             slope = parameters[1]
             intercept = parameters[0]
-        if slope < 0:
-            left_fit.append((slope, intercept))
-        else:
-            right_fit.append((slope, intercept))
+            if slope < 0:
+                left_fit.append((slope, intercept))
+            else:
+                right_fit.append((slope, intercept))
     if(len(left_fit) != 0):
         left_fit_average = np.average(left_fit,axis=0)
         left_line = make_coordiantes(image, left_fit_average)
@@ -43,8 +46,10 @@ def canny(image):
 
 def display_lines(image, lines):
     line_image = np.zeros_like(image)
+    lines = lines.astype(np.int32)
     if lines is not None:
         for x1, y1, x2, y2 in lines:
+            print(x1, y1, x2, y2)
             cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
     return line_image
 
@@ -61,7 +66,10 @@ def overlay_lane_detection(lane_image):
     canny_image = canny(lane_image)
     cropped_image = region_of_interest(canny_image)
     lines = cv2.HoughLinesP(cropped_image, 2, np.pi/180, 100, np.array([]), minLineLength=10, maxLineGap=5)
-    averaged_lines = average_slope_intercept(lane_image, lines)
-    line_image = display_lines(lane_image, averaged_lines)
-    combo_image = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1 )
-    return combo_image
+    if lines is not None:
+        averaged_lines = average_slope_intercept(lane_image, lines)
+        line_image = display_lines(lane_image, averaged_lines)
+        combo_image = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1 )
+        return combo_image
+    else:
+        return lane_image

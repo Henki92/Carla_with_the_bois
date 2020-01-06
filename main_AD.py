@@ -18,8 +18,9 @@ import time
 import numpy as np
 import cv2
 from lane_detection_functions import overlay_lane_detection
-#from controller import *
+from controller import *
 import queue
+import pygame
 
 RGB_image = None
 SEG_image = None
@@ -69,16 +70,9 @@ def draw_image(surface, image):
     array = np.reshape(array, (image.height, image.width, 4))
     array = array[:, :, :3]
     array = array[:, :, ::-1]
+    array = overlay_lane_detection(array)
     image_surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
     surface.blit(image_surface, (0, 0))
-
-def parse_image(image):
-    array = np.frombuffer(image.raw_data, dtype=np.dtype("uint8"))
-    array = np.reshape(array, (image.height, image.width, 4))
-    array = array[:, :, :3]
-    array = array[:, :, ::-1]
-    image_surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
-    #pygame.display.get_surface().blit(image_surface, (0,0))
 
 try:    
     pygame.init()
@@ -95,7 +89,7 @@ try:
 
     # Add input key parser 
     start_in_autopilot = True
-    #controller = KeyboardInput(start_in_autopilot)
+    controller = KeyboardInput(start_in_autopilot)
 
     clock = pygame.time.Clock()
 
@@ -110,11 +104,6 @@ try:
     vehicle = world.spawn_actor(bp, spawn_point)
     vehicle.set_autopilot(True)  # if you just wanted some NPCs to drive.
     actor_list.append(vehicle)
-
-    #add_test_car(spawn_point)
-
-    # vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
-
 
     # https://carla.readthedocs.io/en/latest/cameras_and_sensors
     # get the blueprint for this sensor
@@ -136,22 +125,19 @@ try:
     # add sensor to list of actors
     actor_list.append(sensor_rgb)
 
-    # do something with this sensor
-    #sensor_rgb.listen(lambda data: parse_image(data))
     while True:
         pygame.event.get()
-        image = image_queue.get()
-        #time.sleep(1) #make function to sleep for 10 seconds
-        #clock.tick_busy_loop(60)
-        #controller.parse_events(client, world, clock)
-        
-        #world.tick()
+        try:
+            image = image_queue.get()
+        except queue.Empty:
+            print("Queue is empty")
+        clock.tick_busy_loop(30)
+        if controller.parse_events(vehicle) == 2:
+            break
+        print(image)
         draw_image(display, image)
         pygame.display.flip()
         clock.tick()
-        #text_surface = font.render('% 5d FPS' % clock.get_fps(), True, (255, 255, 255))
-        #display.blit(text_surface, (8, 10)))
-
 
 finally:
     print('destroying actors')
