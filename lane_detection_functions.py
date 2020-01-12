@@ -45,11 +45,9 @@ def canny(image):
     return canny
 
 def display_lines(image, lines):
-    line_image = np.zeros_like(image)
-    lines = lines.astype(np.int32)
+    line_image = np.zeros_like(image).astype(np.int32)
     if lines is not None:
         for x1, y1, x2, y2 in lines:
-            print(x1, y1, x2, y2)
             cv2.line(line_image, (x1,y1), (x2,y2), (255,0,0), 10)
     return line_image
 
@@ -72,4 +70,28 @@ def overlay_lane_detection(lane_image):
         combo_image = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1 )
         return combo_image
     else:
-        return lane_image
+def transform_view(image):
+    # define four corners in original image
+    src = np.float32([[200, 720], [1100, 720], [520, 450], [700, 450]])
+    # define where the corners end up after transformation
+    dst = np.float32([[300, 720], [900, 720], [300, 0], [850, 0]])
+
+    img_size = (image.shape[1],image.shape[0])
+    # Compute perspective tranform from sorce and destination
+    M = cv2.getPerspectiveTransform(src, dst)
+    # Use transform to warp source image
+    warped = cv2.warpPerspective(image, M, img_size)
+    return warped
+
+def inverse_transform_view(image):
+    # define four corners in original image
+    src = np.float32([[300, 720], [900, 720], [300, 0], [850, 0]])
+    # define where the corners end up after transformation
+    dst = np.float32([[200, 720], [1100, 720], [520, 450], [700, 450]])
+
+    img_size = (image.shape[1],image.shape[0])
+    # Compute perspective tranform from sorce and destination
+    M = cv2.getPerspectiveTransform(src, dst)
+    # Use transform to warp source image
+    warped = cv2.warpPerspective(image, M, img_size)
+    return warped
