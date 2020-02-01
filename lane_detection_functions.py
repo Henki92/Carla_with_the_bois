@@ -76,6 +76,7 @@ def transform_view(image):
     # define where the corners end up after transformation
     dst = np.float32([[300, 720], [900, 720], [300, 0], [850, 0]])
 
+def transform_view(image, src, dst):
     img_size = (image.shape[1],image.shape[0])
     # Compute perspective tranform from sorce and destination
     M = cv2.getPerspectiveTransform(src, dst)
@@ -83,12 +84,7 @@ def transform_view(image):
     warped = cv2.warpPerspective(image, M, img_size)
     return warped
 
-def inverse_transform_view(image):
-    # define four corners in original image
-    src = np.float32([[300, 720], [900, 720], [300, 0], [850, 0]])
-    # define where the corners end up after transformation
-    dst = np.float32([[200, 720], [1100, 720], [520, 450], [700, 450]])
-
+def inverse_transform_view(image, src, dst):
     img_size = (image.shape[1],image.shape[0])
     # Compute perspective tranform from sorce and destination
     M = cv2.getPerspectiveTransform(src, dst)
