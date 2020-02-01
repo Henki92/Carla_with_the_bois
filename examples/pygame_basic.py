@@ -8,6 +8,7 @@ done = False
 is_blue = True
 x = 30
 y = 30
+
 # Initialize clock instance
 clock = pygame.time.Clock()
 # Main loop
@@ -26,6 +27,7 @@ while not done:
         if pressed[pygame.K_DOWN]: y += 3
         if pressed[pygame.K_LEFT]: x -= 3
         if pressed[pygame.K_RIGHT]: x += 3
+
         # Make screen black
         screen.fill((0, 0, 0))
         if is_blue: color = (0, 128, 255)
