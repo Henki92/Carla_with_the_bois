@@ -70,6 +70,8 @@ def overlay_lane_detection(lane_image):
         combo_image = cv2.addWeighted(lane_image, 0.8, line_image, 1, 1 )
         return combo_image
     else:
+        return lane_image
+        
 def transform_view(image):
     # define four corners in original image
     src = np.float32([[200, 720], [1100, 720], [520, 450], [700, 450]])
